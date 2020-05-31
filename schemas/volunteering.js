@@ -5,7 +5,9 @@ const volunteeringSchema = new Schema({
     inDistrict: Boolean,
     hours: Number,
     title: String,
-    date: Date
+    day: Number,
+    month: Number,
+    year: Number
 });
 
 module.exports = volunteeringSchema;
