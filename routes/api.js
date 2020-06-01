@@ -206,11 +206,10 @@ router.post('/volunteering/new', (req, res) => {
     month = Number.parseInt(month);
     year = Number.parseInt(year);
 
-    if (!memberID || !inDistrict || !hours || !title ||
-        typeof hours != 'number' || typeof title != 'string' || typeof year != 'number' || typeof day != 'number' || typeof month != 'number') {
+    if (typeof hours != 'number' || typeof title != 'string' || typeof year != 'number' || typeof day != 'number' || typeof month != 'number') {
             res.json({
                 code: 400,
-                msg: 'Error, please provide  memberID, inDistrict (bool), hours (num), title (str), day (int), month (int), and year (int)'
+                msg: `Error, please provide  memberID, inDistrict (bool), hours (num), title (str), day (int), month (int), and year (int). Got ${typeof memberID}, ${typeof inDistrict}, ${typeof hours}, ${typeof title}, ${typeof day}, ${typeof month}, ${typeof year}`
             });
             return;
     }
@@ -227,7 +226,7 @@ router.post('/volunteering/new', (req, res) => {
                 code: 200,
                 msg: 'ok',
                 member,
-                voluntteringDoc: doc
+                volunteeringDoc: doc
             });
         })();
     });
