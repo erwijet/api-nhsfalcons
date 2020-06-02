@@ -120,8 +120,13 @@ router.post('/:thing/:action', (req, res, next) => {
             let EventModal = mongoose.model('Event', eventSchema);
             switch (action) {
                 case 'create':
-                    let { title, date, isMeeting } = req.body;
-                    if (!title || !date) {
+                    let { title, day, month, year, isMeeting } = req.body;
+                    
+                    day = Number.parseInt(day);
+                    month = Number.parseInt(month);
+                    year = Number.parseInt(year);
+                    
+                    if (!title || typeof day != 'day' || typeof month != 'number' || typeof year != 'number') {
                         res.json({
                            code: 400,
                            msg: 'Error, please provide both a title and a date' 
