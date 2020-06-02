@@ -120,7 +120,7 @@ router.post('/:thing/:action', (req, res, next) => {
             let EventModal = mongoose.model('Event', eventSchema);
             switch (action) {
                 case 'create':
-                    let { title, date } = req.body;
+                    let { title, date, isMeeting } = req.body;
                     if (!title || !date) {
                         res.json({
                            code: 400,
@@ -129,7 +129,7 @@ router.post('/:thing/:action', (req, res, next) => {
                         return;
                     }
 
-                    EventModal.create({ title, date }, (err, event) => {
+                    EventModal.create({ title, date, isMeeting }, (err, event) => {
                         res.json({
                             code: 200,
                             msg: 'ok',
