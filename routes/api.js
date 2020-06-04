@@ -3,6 +3,7 @@ const { Router } = require('express');
 
 const memberSchema = require('../schemas/member');
 const eventSchema = require('../schemas/event');
+const tutoringSchema = require('../schemas/tutoring');
 const volunteeringSchema = require('../schemas/volunteering');
 
 const mongoose = require('mongoose');
@@ -235,6 +236,121 @@ router.post('/volunteering/new', (req, res) => {
             });
         })();
     });
+});
+
+router.post('/tutoring/create', (req, res) => {
+    let { month, count, memberID } = req.body;
+
+    month = Number.parseInt(month);
+    if (typeof count != 'undefined')
+        count = Number.parseInt(count);
+
+    if (typeof month != 'number' || Number.isNaN(month)|| month < 1 || month > 12 || typeof memberID != 'string' || ( typeof count != 'undefined' && typeof count != 'number' )) {
+        res.json({
+            code: 400,
+            msg: 'bad request. month must be an integer (1 <= n <= 12) and count must be an integer. MemberID must be a string. Count is optional (default. 0)',
+            count,
+            memberID,
+            month
+        });
+
+        return;
+    }
+
+    let MemberModel = mongoose.model('Member', memberSchema);
+    MemberModel.find({_id: memberID}, (err, members) => {
+        if (err) {
+            res.json({
+                code: 400,
+                msg: 'error when loading members',
+                err
+            });
+            return;
+        }
+
+        let member = members[0];
+        
+        for (let tutoringInstance of member.tutoring) {
+            if (tutoringInstance.month == month) {
+                res.json({
+                    code: 401,
+                    msg: `create request rejected. month '${month}' already exists: ${members[0].name}(${members[0].name} -> ${tutoringInstance})`,
+                });
+                return;
+            }
+        }
+
+        (async () => {
+            let TutoringModel = mongoose.model('Event', tutoringSchema);
+            let tutoringSession = await TutoringModel.create({month, count});
+            member.tutoring.push(tutoringSession);
+            await member.save(); // update record
+
+            res.json({
+                code: 200,
+                msg: 'ok',
+                tutoringSession,
+                member
+            });
+        })();
+    });
+});
+
+router.post('/tutoring/update', (req, res) => {
+    let { memberID, month, count } = req.body;
+
+    month = Number.parseInt(month);
+    count = Number.parseInt(count);
+
+    if (
+        typeof memberID != 'string' ||
+        Number.isNaN(month) ||
+        Number.isNaN(count)
+    ) {
+        res.json({
+            code: 400,
+            msg: 'error! memberID must be of type string. month, and count both must be of type number'
+        });
+        return;
+    }
+
+    let MemberModel = mongoose.model('Member', memberSchema);
+    MemberModel.find({ _id: memberID }, (err, members) => {
+        if (err) {
+            res.json({
+                code: 400,
+                msg: 'error in loading member of id ' + memberID,
+                err
+            });
+            return;
+        }
+
+        let member = members[0]; // take first result
+
+        (async () => { 
+            for (let i in member.tutoring) {
+                let session = member.tutoring[i];
+                if (session.month == month) {
+                    member.tutoring[i].count = count;
+                    await member.save();
+
+                    res.json({
+                        code: 200,
+                        msg: 'ok',
+                        member,
+                        updatedSession: session
+                    });
+                    return;
+                }
+            }
+
+            res.json({
+                code: 400,
+                msg: 'Error! no session could be found for member ' + memberID + ' with month ' + month
+            });
+        })();
+    })
+
 });
 
 
