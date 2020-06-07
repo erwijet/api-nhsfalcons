@@ -179,15 +179,18 @@ router.post('/:thing/:action', (req, res, next) => {
                     break;
                 case 'query':
                     let { query, sort } = req.body;
-                    if (typeof query != 'object' || (typeof sort != 'undefined' && typeof sort != 'object')) {
-                        // if query is not an object or if sort is defined as anything other than an object -->
-                        res.json({
-                            code: 400,
-                            msg: 'Error, query and sort both must be of type "object"',
-                            sort,
-                            query
-                        });
-                        return;
+
+                    if (typeof query != 'undefined' || typeof sort != 'undefined') {
+                        if (typeof query != 'object' || (typeof sort != 'undefined' && typeof sort != 'object')) {
+                            // if query is not an object or if sort is defined as anything other than an object -->
+                            res.json({
+                                code: 400,
+                                msg: 'Error, query and sort both must be of type "object"',
+                                sort,
+                                query
+                            });
+                            return;
+                        }
                     }
 
                     sort = sort || { };
