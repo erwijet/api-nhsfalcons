@@ -57,12 +57,15 @@ router.post('/:thing/:action', (req, res, next) => {
                     }));
                     break;
                 case 'update':
-                    let { filter, update } = req.body;
+                    let { filter } = req.body;
+                    let update = req.body.update;
                     filter = filter || req.body.query;
-                    if (!update) {
+                    if (typeof update == 'undefined') {
                         res.json({
                             code: 400,
-                            msg: 'Error! Please provide an "update" object to use to replace values'
+                            msg: 'Error! Please provide an "update" object to use to replace values',
+                            update,
+                            filter
                         });
                         return;
                     }
@@ -150,7 +153,7 @@ router.post('/:thing/:action', (req, res, next) => {
                     break;
                 case 'update':
                     let { filter, update } = req.body;
-                    if (!update) {
+                    if (typeof update == 'undefined') {
                         res.json({
                             code: 400,
                             msg: 'Error. Please provide update object'
@@ -357,6 +360,53 @@ router.post('/tutoring/update', (req, res) => {
             });
         })();
     })
+});
+
+router.post('/attendence/remove', (req, res) => {
+    let { memberID, eventID } = req.body;
+    if (typeof memberID != 'string' || typeof eventID != 'string') {
+        res.json({
+            code: 400,
+            msg: 'Error! eventID and memberID both must be of type string. Got (mid) ' + typeof memberID + ' and (eid)' + typeof eventID
+        });
+        return;
+    }
+
+    let MemberModel = mongoose.model('Member', memberSchema);
+
+    MemberModel.find({ _id: memberID }, (err, memberDocs) => {
+        if (err) {
+            res.json({
+                code: 400,
+                msg: 'Error when loading member with id of ' + memberID,
+                err
+            });
+            return;
+        }
+
+        let member = memberDocs.shift();
+
+        let instancesExist = true;
+
+        while (instancesExist) {
+            instancesExist = false;
+            for (let _evt of member.attendence) {
+                if (_evt._id == eventID) {
+                    instancesExist = true;
+                    break;
+                }
+            }
+
+            for (let i in member.attendence) {
+                if (member.attendence[i]._id == eventID) {
+                    member.attendence.splice(i, 1); // remove element at i
+                }
+                break;
+            }
+        }
+
+        member.save();
+    });
 });
 
 module.exports = router;

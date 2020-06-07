@@ -12,9 +12,9 @@ const memberSchema = new Schema({
     position: { default: 'member', type: String },
     active: { default: true, type: Boolean },
     cord: { default: false, type: Boolean },
-    tutoring: [tutoringSchema],
-    attendence: [eventSchema],
-    volunteering: [volunteeringSchema]
+    tutoring: { default: [], type: [tutoringSchema] },
+    attendence: { default: [], type: [eventSchema] },
+    volunteering: { default: [], type: [volunteeringSchema] }
 });
 
 module.exports = memberSchema;
