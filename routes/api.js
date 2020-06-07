@@ -127,15 +127,19 @@ router.post('/:thing/:action', (req, res, next) => {
                     month = Number.parseInt(month);
                     year = Number.parseInt(year);
                     
-                    if (!title || typeof day != 'day' || typeof month != 'number' || typeof year != 'number') {
+                    if (typeof title != 'string' ||
+                        (typeof isMeeting != 'boolean' && typeof isMeeting != 'undefined') ||
+                        Number.isNaN(day) || 
+                        Number.isNaN(month) ||
+                        Number.isNaN(year)) {
                         res.json({
-                           code: 400,
-                           msg: 'Error, please provide both a title and a date' 
+                            code: 400,
+                            msg: 'error. title must be of type "string"; day, month, and year must of type "number" and integers. isMeeting must be of type "boolean" or "undefined"'
                         });
                         return;
                     }
 
-                    EventModal.create({ title, date, isMeeting }, (err, event) => {
+                    EventModal.create({ title, day, month, year, isMeeting }, (err, event) => {
                         res.json({
                             code: 200,
                             msg: 'ok',
@@ -350,8 +354,6 @@ router.post('/tutoring/update', (req, res) => {
             });
         })();
     })
-
 });
-
 
 module.exports = router;
