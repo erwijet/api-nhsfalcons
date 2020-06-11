@@ -306,6 +306,105 @@ router.post('/tutoring/create', (req, res) => {
     });
 });
 
+router.post('/attendence/update-bulk', (req, res) => {
+    let memberIDs = req.body.memberIDs;
+    let sample;
+    try { sample = memberIDs[0] } catch (ex) { }
+    if (typeof memberIDs != 'object' || typeof sample != 'string') {
+        res.json({
+            code: 400,
+            msg: 'Error! memberIds must be a non-empty array of strings',
+            memberIDs
+        });
+        return;
+    }
+
+    let { eventID, state } = req.body;
+    if (state.toLowerCase() == 'true')
+        state = true;
+    else if (state.toLowerCase() == 'false')
+        state = false;
+    else
+        state = undefined;
+    
+    if (typeof eventID != 'string' || typeof state != 'boolean') {
+        res.json({
+            code: 400,
+            msg: 'Error! eventID must be of type "string" and state must be of type "boolean"'
+        });
+        return;
+    }
+
+    let EventModal = mongoose.model('Event', eventSchema);
+    let MemberModel = mongoose.model('Member', memberSchema);
+
+    EventModal.find({_id: eventID}, (err, events) => {
+        if (err) {
+            res.json({
+                code: 400,
+                msg: 'Error when loading event with id of ' + eventID,
+                err
+            });
+            return;
+        }
+
+        if (events.length < 1) {
+            res.json({
+                code: 400,
+                msg: 'No event could be found witn the ID ' + eventID
+            });
+            return;
+        }
+
+        let event = events.shift(); // get first and only item w/o null pointer nonsense
+
+        MemberModel.find({ _id: { $in: memberIDs } }, async (err, members) => {
+            if (err) {
+                res.json({
+                    code: 400,
+                    msg: 'error in loading members with ids of ' + memberIDs,
+                    err
+                });
+                return;
+            }
+
+            for (let member of members) {
+                if (state) {
+                    let skip = false;
+                    for (let evt of member.attendence) {
+                        if (evt._id == eventID)
+                            skip = true
+                    }
+                    if (!skip) {
+                        member.attendence.push(event);
+                        await member.save();
+                    }
+                } else {
+                    let i;
+                    for (let e in member.attendence) {
+                        let evt = member.attendence[e];
+                        if (evt._id == eventID) {
+                            e = i;
+                        }
+                    }
+                    console.log(member, i);
+                    member.attendence.splice(i, 1);
+                    console.log(member);
+                    await member.save();
+                }
+            }
+
+            res.json({
+                code: 200,
+                msg: 'ok',
+                members,
+                event,
+                state
+            })
+        });
+    });
+});
+
 router.post('/tutoring/update', (req, res) => {
     let { memberID, month, count } = req.body;
 
