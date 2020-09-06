@@ -351,7 +351,7 @@ router.post('/attendence/update-bulk', (req, res) => {
         if (events.length < 1) {
             res.json({
                 code: 400,
-                msg: 'No event could be found witn the ID ' + eventID
+                msg: 'No event could be found with the ID ' + eventID
             });
             return;
         }
@@ -384,13 +384,16 @@ router.post('/attendence/update-bulk', (req, res) => {
                     for (let e in member.attendence) {
                         let evt = member.attendence[e];
                         if (evt._id == eventID) {
-                            e = i;
+                            i = e;
                         }
                     }
-                    console.log(member, i);
-                    member.attendence.splice(i, 1);
-                    console.log(member);
-                    await member.save();
+
+                    if (typeof i != 'undefined') {
+                        console.log(member, i);
+                        member.attendence.splice(i, 1);
+                        console.log(member);
+                        await member.save();
+                    }
                 }
             }
 
