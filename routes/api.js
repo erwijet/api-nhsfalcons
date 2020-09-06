@@ -384,7 +384,7 @@ router.post('/attendence/update-bulk', (req, res) => {
                     for (let e in member.attendence) {
                         let evt = member.attendence[e];
                         if (evt._id == eventID) {
-                            e = i;
+                            i = e;
                         }
                     }
                     console.log(member, i);
