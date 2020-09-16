@@ -7,24 +7,66 @@ const tutoringSchema = require('../schemas/tutoring');
 const volunteeringSchema = require('../schemas/volunteering');
 
 const mongoose = require('mongoose');
+const { get } = require('../schemas/tutoring');
 mongoose.connect(process.env.DB_STRING, { useUnifiedTopology: true, useNewUrlParser: true });
 let db = mongoose.connection;
 db.on('error', console.error.bind(console, 'Mongo connection error...'));
 
 const VALID_THINGS = ['member', 'event'];
-const VALID_ACTIONS = ['create', 'update', 'query'];
+const VALID_ACTIONS = ['create', 'update', 'query', 'delete'];
 const VALID_POSITIONS = ['president', 'vice-president', 'secretary', 'treasurer', 'member']
 let router = Router();
+
+// delete entry and all refrences to that entry for all members
+async function clearAttendenceForEventAndRemoveEventBy(deleteFilter) {
+        let EventModal = mongoose.model('Event', eventSchema);
+        let MemberModal = mongoose.model('Member', memberSchema);
+
+        let eventDocs = await EventModal.find(deleteFilter);
+
+        if (eventDocs.length == 0) {
+            return;
+        }
+
+        let memberDocs = await MemberModal.find({}); // Select all members
+
+        let returnMemberDocs = [];
+
+        for (let event of eventDocs) {
+            for (let member of memberDocs) {
+
+                // find index of event to remove from attendence array
+
+                let i;
+                for (let e in member.attendence) {
+                    if (member.attendence[e]._id.toString() == event._id.toString())
+                        i = e;
+                }
+
+                if (typeof i == 'undefined') continue;
+
+                console.log(i, member.attendence);
+                member.attendence.splice(i, 1); // remove event
+                console.log("DONE", member.attendence)
+
+                returnMemberDocs.push(member);
+                await member.save();
+            }
+
+            await event.remove();
+        }
+}
 
 router.post('/:thing/:action', (req, res, next) => {
     let { thing, action } = req.params;
     if (!VALID_THINGS.includes(thing) || !VALID_ACTIONS.includes(action))
         next();
 
+    let EventModal = mongoose.model('Event', eventSchema);
+    let MemberModel = mongoose.model('Member', memberSchema);
+
     switch (thing) {
         case 'member':
-            let MemberModel = mongoose.model('Member', memberSchema);
-            
             switch (action) {
                 case 'create':
                     let { name, grade, position } = req.body;
@@ -118,10 +160,15 @@ router.post('/:thing/:action', (req, res, next) => {
                         });
                     })();
                     break;
+                case 'delete':
+                    res.json({
+                        code: 200,
+                        msg: "NO OPERATION PERFORMED. USERS MAY NOT BE DELETED. PLEASE CALL /member/update and set *active* to *false*."
+                    });
+                    break;
             }
             break;
         case 'event':
-            let EventModal = mongoose.model('Event', eventSchema);
             switch (action) {
                 case 'create':
                     let { title, day, month, year, isMeeting } = req.body;
@@ -211,6 +258,72 @@ router.post('/:thing/:action', (req, res, next) => {
             }
             break;
     }
+});
+
+router.post('/event/sync', (req, res) => {
+    let EventModel = mongoose.model('Event', eventSchema);
+    let MemberModel = mongoose.model('Member', memberSchema);
+
+    let { events } = req.body;
+    if (!events)
+        events = [];
+
+    (async () => {
+        let memberDocs = await MemberModel.find({});
+        let updatedMembers = [];
+
+        for (let newEvent of events) {
+            let doc = await EventModel.find({ _id: newEvent._id });
+
+            if (doc.length != 0) {
+                for (let member of memberDocs) {
+                    if (member.attendence.length == 0) continue;
+
+                    for (let e in member.attendence) {
+                        if (member.attendence[e]._id.toString() == newEvent._id.toString()) {
+                            member.attendence[e] = newEvent;
+                            await member.save();
+                            updatedMembers.push(member);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (doc.length == 0) // if event does not exist
+                await EventModel.create(newEvent);
+            else // else, update existing event
+                await EventModel.update({_id: newEvent._id}, newEvent);
+        }
+
+        // purge events from db
+
+        let dbEvents = await EventModel.find({});
+        let eventsTaggedForRemoval = [];
+
+        for (let thisEvent of dbEvents) {
+            let remove = true;
+            for (let newEvent of events) {
+                if (!newEvent._id) { remove = false; continue }; // is event doesn't have _id, it hasnt been made yet. So no need to search for it
+                if (newEvent._id.toString() == thisEvent._id.toString())
+                    remove = false;
+            }
+
+            if (remove)
+                eventsTaggedForRemoval.push(thisEvent);
+        }
+
+        for (let toRemove of eventsTaggedForRemoval) {
+            await clearAttendenceForEventAndRemoveEventBy(toRemove);
+        }
+
+        res.json({
+            code: 200,
+            msg: `Done. Updated ${events.length} events and ${updatedMembers.length} member event attendence refs.`,
+            events,
+            updatedMembers
+        })
+    })();
 });
 
 router.post('/volunteering/new', (req, res) => {
@@ -335,7 +448,6 @@ router.post('/attendence/update-bulk', (req, res) => {
         return;
     }
 
-    let EventModal = mongoose.model('Event', eventSchema);
     let MemberModel = mongoose.model('Member', memberSchema);
 
     EventModal.find({_id: eventID}, (err, events) => {
@@ -509,6 +621,22 @@ router.post('/attendence/remove', (req, res) => {
 
         member.save();
     });
+});
+
+router.post('/hours', (req, res) => {
+    (async () => {
+        let MemberModel = mongoose.model('Member', memberSchema);
+
+        // Pull MemberId and the total number of volunteering hours for that member
+        let aggregation = [{"$unwind":{"path":"$volunteering","preserveNullAndEmptyArrays":true}},{"$group":{"_id":{"_id":"$_id","name":"$name","grade":"$grade","position":"$position","probation":"$probation"},"hours":{"$sum":"$volunteering.hours"}}},{"$set":{"name":"$_id.name","grade":"$_id.grade","position":"$_id.position","probation":"$_id.probation","_id":"$_id._id"}}];
+        let members = await MemberModel.aggregate(aggregation);
+
+        res.json({
+            code: 200,
+            msg: 'ok',
+            memberDocs: members
+        });
+    })();
 });
 
 module.exports = router;
