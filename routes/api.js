@@ -449,6 +449,7 @@ router.post('/attendence/update-bulk', (req, res) => {
     }
 
     let MemberModel = mongoose.model('Member', memberSchema);
+    let EventModal = mongoose.model('Event', eventSchema);
 
     EventModal.find({_id: eventID}, (err, events) => {
         if (err) {
