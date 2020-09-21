@@ -326,6 +326,77 @@ router.post('/event/sync', (req, res) => {
     })();
 });
 
+router.post('/volunteering/remove', (req, res) => {
+    let { volunteeringID, memberID } = req.body;
+
+    if (typeof volunteeringID != 'string') {
+        res.json({
+            code: 400,
+            msg: 'Bad request',
+            err: 'volunteeringID must be of type "string", got "' + typeof volunteeringID + '"'
+        });
+        return;
+    }
+
+    if (typeof memberID != 'string') {
+        res.json({
+            code: 400,
+            msg: 'Bad request',
+            err: 'memberID must be of type "string", got "' + typeof memberID + '"'
+        });
+        return;
+    }
+
+    let VolunteeringModel = mongoose.model('Volunteering', volunteeringSchema);
+    let MemberModel = mongoose.model('Member', memberSchema);
+
+    (async () => {
+        let member = await MemberModel.findById(memberID);
+        if (!member) {
+            res.json({
+                code: 400,
+                msg: 'Not found',
+                err: 'No member could be found with _id of ' + memberID
+            });
+            return;
+        }
+
+        let volunteeringEventToRemove = await VolunteeringModel.findById(volunteeringID);
+        if (!volunteeringEventToRemove) {
+            res.json({
+                code: 400,
+                msg: 'Not found',
+                err: 'No volunteering entry could be found with _id of ' + volunteeringID
+            });
+            return;
+        }
+
+        let e;
+        for (let i in member.volunteering) {
+            let volunteeringEvent = member.volunteering[i];
+            if (volunteeringEvent._id.toString() == volunteeringEventToRemove._id.toString()) {
+                e = i;
+                break;
+            }
+        }
+
+        // remove refrence to volunteering event (if exists)
+        if (typeof e != 'undefined') {
+            member.volunteering.splice(e, 1);
+            await member.save();
+        }
+
+        await volunteeringEventToRemove.remove();
+
+        res.json({
+            code: 200,
+            msg: 'ok',
+            member,
+            volunteeringEventRemoved: volunteeringEventToRemove
+        });
+    })();
+});
+
 router.post('/volunteering/new', (req, res) => {
     let { memberID, inDistrict, hours, day, month, year, title} = req.body;
 
