@@ -700,7 +700,7 @@ router.post('/hours', (req, res) => {
         let MemberModel = mongoose.model('Member', memberSchema);
 
         // Pull MemberId and the total number of volunteering hours for that member
-        let aggregation = [{"$unwind":{"path":"$volunteering","preserveNullAndEmptyArrays":true}},{"$group":{"_id":{"_id":"$_id","name":"$name","grade":"$grade","position":"$position","probation":"$probation"},"hours":{"$sum":"$volunteering.hours"}}},{"$set":{"name":"$_id.name","grade":"$_id.grade","position":"$_id.position","probation":"$_id.probation","_id":"$_id._id"}}];
+        let aggregation = [{"$unwind":{"path":"$volunteering","preserveNullAndEmptyArrays":true}},{"$group":{"_id":{"_id":"$_id","name":"$name","grade":"$grade","position":"$position","probation":"$probation"},"hours":{"$sum":"$volunteering.hours"}}},{"$set":{"name":"$_id.name","grade":"$_id.grade","position":"$_id.position","probation":"$_id.probation","_id":"$_id._id"}},{"$sort": {"name":1}}];
         let members = await MemberModel.aggregate(aggregation);
 
         res.json({
