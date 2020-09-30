@@ -17,6 +17,8 @@ const VALID_ACTIONS = ['create', 'update', 'query', 'delete'];
 const VALID_POSITIONS = ['president', 'vice-president', 'secretary', 'treasurer', 'member']
 let router = Router();
 
+router.get('/awstest', (req, res) => res.end("hello, world!"));
+
 // delete entry and all refrences to that entry for all members
 async function clearAttendenceForEventAndRemoveEventBy(deleteFilter) {
         let EventModal = mongoose.model('Event', eventSchema);
