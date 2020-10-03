@@ -467,7 +467,7 @@ router.post('/tutoring/create', (req, res) => {
         for (let tutoringInstance of member.tutoring) {
             if (tutoringInstance.month == month) {
                 res.json({
-                    code: 401,
+                    code: 400,
                     msg: `create request rejected. month '${month}' already exists: ${members[0].name}(${members[0].name} -> ${tutoringInstance})`,
                 });
                 return;
@@ -475,7 +475,7 @@ router.post('/tutoring/create', (req, res) => {
         }
 
         (async () => {
-            let TutoringModel = mongoose.model('Event', tutoringSchema);
+            let TutoringModel = mongoose.model('Tutoring', tutoringSchema);
             let tutoringSession = await TutoringModel.create({month, count});
             member.tutoring.push(tutoringSession);
             await member.save(); // update record
