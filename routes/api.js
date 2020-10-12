@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Router } = require('express');
 
+const today = require('../today'); // validate auth tokens
 const memberSchema = require('../schemas/member');
 const eventSchema = require('../schemas/event');
 const tutoringSchema = require('../schemas/tutoring');
@@ -693,6 +694,43 @@ router.post('/attendence/remove', (req, res) => {
 
         member.save();
     });
+});
+
+router.post('/raw/query', (req, res) => {
+    let { auth, query } = req.body;
+
+    if (!auth || !query) {
+        res.json({
+            code: 400,
+            msg: 'Auth and Query are both required'
+        });
+        return;
+    }
+
+    if (auth != today()) {
+        res.json({
+            code: 401,
+            msg: "Not Authorized"
+        });
+        return;
+    }
+
+    let MemberModel = mongoose.model('Member', memberSchema);
+    (async () => {
+        let docs;
+        let failed;
+
+        try { docs = await MemberModel.find(query); }
+        catch(ex) { res.json({code: 400, msg: ex}); failed = true; }
+
+        if (failed) return;
+
+        res.json({
+            code: 200,
+            msg: "ok",
+            docs
+        });
+    })();
 });
 
 router.post('/hours', (req, res) => {
