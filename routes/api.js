@@ -707,6 +707,8 @@ router.post('/raw/query', (req, res) => {
         return;
     }
 
+    console.log(auth, today(), auth == today());
+
     if (auth != today()) {
         res.json({
             code: 401,
