@@ -5,6 +5,7 @@ const eventSchema = require('../schemas/event');
 const tutoringSchema = require('../schemas/tutoring');
 const volunteeringSchema = require('../schemas/volunteering');
 const mongoose = require('mongoose');
+const { MongoNetworkError } = require('mongodb');
 
 mongoose.connect(process.env.DB_STRING, { useUnifiedTopology: true, useNewUrlParser: true });
 let db = mongoose.connection;
@@ -20,7 +21,7 @@ function validate(req) {
     return auth == today();
 }
 
-raw.post('/query', (req, res, next) => {
+raw.post('/query', (req, res) => {
     let { auth, query } = req.body;
 
     if (!auth || !query) {
@@ -31,7 +32,7 @@ raw.post('/query', (req, res, next) => {
         return;
     }
 
-    console.log(auth, today(), auth == today());
+
 
     if (!validate(req)) {
         res.json({
@@ -45,10 +46,79 @@ raw.post('/query', (req, res, next) => {
         let docs;
         let failed;
 
+        let serverInstructions = query['@returns'];
+        if (typeof serverInstructions != 'undefined')
+            query['@returns'] = undefined; // remove @returns and store to different variable
+
         try { docs = await MemberModel.find(query); }
         catch(ex) { res.json({code: 400, msg: ex}); failed = true; }
 
-        if (failed) next();
+        if (typeof serverInstructions != 'undefined') {
+            if (serverInstructions.omit) {
+                for (let i in docs) {
+                    let _this = JSON.parse(JSON.stringify(docs[i]));
+                    let newI = { };
+                    for (let key of Object.keys(_this)) {
+                        if (!serverInstructions.omit.includes(key))
+                            newI[key] = docs[i][key];
+                    }
+                    docs[i] = newI;
+                }
+            }
+        }
+
+        if (typeof serverInstructions != 'undefined') {
+            try {
+                if (typeof serverInstructions.select != 'undefined') {
+                    let selectMe = [...serverInstructions.select];
+
+                    for (let i in docs) {
+                        let newI = { };
+                        for (let key of selectMe) {
+                            // console.log(key, i, docs[i][key]);
+                            if (typeof docs[i][key] != 'undefined') {
+                                newI[key] = docs[i][key];
+                                // console.log(key, typeof docs[i][key], newI);
+                            }
+                        }
+                        docs[i] = newI;
+                    }
+                }
+
+                if (typeof serverInstructions.rename != 'undefined') {
+                    let rename = [...serverInstructions.rename];
+
+                    for (let i in docs) {
+                        for (let e of rename) {
+                            docs[i][rename[e]] = docs[i][e];
+                            docs[i][e] = undefined;
+                        }
+                    }
+                }
+
+                if (typeof serverInstructions.transform != 'undefined') {
+                    let { in: _in, out: _out, js } = serverInstructions.transform;
+                    
+                    if (_in && _out && js) {
+                        if (_out == '__returns' || _out == 'done')
+                            _out = '_returns';
+                        if (_in == 'docs' || _out == 'done')
+                            _in = '_docs';
+
+                        let __returns = [];
+                        let done = false;
+                        eval(`(async () => { let ${_in} = [...docs]; let ${_out} = []; ${js} __returns = ${_out}; done = true; })();`);
+
+                        console.log(_out);
+
+                        while (!done) { }
+
+                        docs = [...__returns];
+                    }
+                }
+            } catch (ex) { res.json({ code: 400, err: ex.toString() }); failed = true; }
+        }
+        if (failed) return;
 
         res.json({
             code: 200,

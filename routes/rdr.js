@@ -55,7 +55,7 @@ rdr.get('/find', (req, res) => {
         console.log(req.query, req.query.q);
         let dbRes = await RedirectModel.find({ name: req.query.q });
         if (dbRes.length == 0) {
-            res.json({ code: 404, msg: ":(\n\nNo NHSFalcons RDR string entry with provided name exists. Check Capitilization?\n\n\nSorry,\nTyler (p'21)" })
+            res.json({ code: 404, msg: 'No entry found' })
             return;
         }
 
