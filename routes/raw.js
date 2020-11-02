@@ -109,8 +109,8 @@ raw.post('/query', (req, res) => {
 
                         let __returns = [];
                         let done = false;
-                        eval(`if (typeof ${_in} == 'undefined') { let ${_in}; };`);
-                        eval(`if (typeof ${_out} == 'undefined') { let ${_out}; };`);
+                        eval(`if (typeof ${_in} == 'undefined') { let ${_in} = []; };`);
+                        eval(`if (typeof ${_out} == 'undefined') { let ${_out} = []; };`);
                         eval(`(async () => { ${_in} = [...docs]; ${_out} = []; ${js} __returns = ${_out}; done = true; return; })();`);
 
                         while (!done) { }
