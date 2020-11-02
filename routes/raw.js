@@ -99,6 +99,8 @@ raw.post('/query', (req, res) => {
                 if (typeof serverInstructions.transform != 'undefined') {
                     let { in: _in, out: _out, js } = serverInstructions.transform;
                     
+                    console.log(_in, _out, js);
+
                     if (_in && _out && js) {
                         if (_out == '__returns' || _out == 'done')
                             _out = '_returns';
@@ -107,16 +109,16 @@ raw.post('/query', (req, res) => {
 
                         let __returns = [];
                         let done = false;
-                        eval(`(async () => { let ${_in} = [...docs]; let ${_out} = []; ${js} __returns = ${_out}; done = true; })();`);
-
-                        console.log(_out);
+                        eval(`if (typeof ${_in} == 'undefined') { let ${_in}; };`);
+                        eval(`if (typeof ${_out} == 'undefined') { let ${_out}; };`);
+                        eval(`(async () => { ${_in} = [...docs]; ${_out} = []; ${js} __returns = ${_out}; done = true; return; })();`);
 
                         while (!done) { }
 
                         docs = [...__returns];
                     }
                 }
-            } catch (ex) { res.json({ code: 400, err: ex.toString() }); failed = true; }
+            } catch (ex) { console.log(ex); res.json({ code: 400, err: ex.toString() }); failed = true; return; }
         }
         if (failed) return;
 
@@ -125,6 +127,8 @@ raw.post('/query', (req, res) => {
             msg: "ok",
             docs
         });
+
+        return;
     })();
 });
 
