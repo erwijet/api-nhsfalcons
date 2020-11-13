@@ -5,7 +5,6 @@ const eventSchema = require('../schemas/event');
 const tutoringSchema = require('../schemas/tutoring');
 const volunteeringSchema = require('../schemas/volunteering');
 const mongoose = require('mongoose');
-const { MongoNetworkError } = require('mongodb');
 
 mongoose.connect(process.env.DB_STRING, { useUnifiedTopology: true, useNewUrlParser: true });
 let db = mongoose.connection;

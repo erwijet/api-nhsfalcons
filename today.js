@@ -1,3 +1,5 @@
+// generate day-unique hashes
+
 const crypto = require('crypto');
 
 module.exports = function () {
