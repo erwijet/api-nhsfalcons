@@ -2,3 +2,4 @@ node_modules/
 mongoScratch.js
 util.js
 .env
+pm2-api-start.sh
