@@ -39,6 +39,18 @@ rdr.post('/insert', (req, res) => {
     }
 
     (async () => {
+        let dbQuery = await RedirectModal.find({ name }); // lookup existing links by name
+        if (dbQuery.length != 0) {
+            res.json({
+                code: 422,
+                msg: 'Resource already exists with uid (name) specified. No modication has been made.',
+                dbQuery,
+                name,
+                url
+            });
+            return;
+        }
+
         let dbRes = await RedirectModel.create({ name, url });
         res.json({
             code: 200,

@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser')
 require('dotenv').config();
 
+const VERSIONNUMBER = require('./version').getAndUpdateVersion()
+
 const api = require('./routes/api');
 const usr = require('./routes/usr');
 const raw = require('./routes/raw');
@@ -22,5 +24,7 @@ app.use(express.json());
 app.use('/', api);
 app.use('/usr', usr);
 app.use('/raw', raw);
+
+app.get('/', (req, res) => res.end('[API instance] # ' + VERSIONNUMBER));
 
 app.listen(PORT, console.log(`Server listening on http://localhost:${PORT}...`));
