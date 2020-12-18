@@ -39,7 +39,7 @@ rdr.post('/insert', (req, res) => {
     }
 
     (async () => {
-        let dbQuery = await RedirectModal.find({ name }); // lookup existing links by name
+        let dbQuery = await RedirectModel.find({ name }); // lookup existing links by name
         if (dbQuery.length != 0) {
             res.json({
                 code: 422,

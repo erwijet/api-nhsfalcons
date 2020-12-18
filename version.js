@@ -19,7 +19,7 @@ require('dotenv').config();
         fs.writeFileSync(PATH, '0'); // create file with version number 0
 
     let versionNumber = Number.parseInt(fs.readFileSync(PATH));
-    fs.writeFileSync(PATH, ++versionNumber);
+    fs.writeFileSync(PATH, (++versionNumber).toString());
 
     return versionNumber.toString();
 };
